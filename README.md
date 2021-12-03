@@ -11,6 +11,6 @@
 #### (2) Group insignificant categorical variables according to logistic regression.
 #### (3) Address multicollinearity and other issues to further improve model.
 
-### Interpretation (cannot do yet, need to finish model part (2) and (3) first)
+### Interpretation and Conclusion (cannot do yet, need to finish model part (2) and (3) first)
 
-### Conclusion (cannot do yet, need to finish Interpretation first)
+### Limitations (cannot do yet)
