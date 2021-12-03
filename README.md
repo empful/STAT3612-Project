@@ -7,7 +7,7 @@
 ### Preprocessing (basically finished, can remove outliers later)
 
 ### Model
-#### (1) Compare different models and conclude Logistic Regression has satifying accuracy compared with non-linear models - *finished code, waiting for svm, rf to train*. Note Logistic Regression test accuracy = 84.39%.
+#### (1) Compare different models and conclude Logistic Regression has satifying accuracy compared with non-linear models - *finished code, waiting for svm, rf to train*. Note Logistic Regression test accuracy = 83.56%.
 #### (2) Group insignificant categorical variables according to logistic regression.
 #### (3) Address multicollinearity and other issues to further improve model.
 
