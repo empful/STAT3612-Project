@@ -52,7 +52,7 @@ names(IncomeData)
 ```
 Remove each variable and perform ANOVA test. The result is that all variables are significant so we should keep them.
 ```{r}
-logistic_mod2 = train(income ~. -education.num,
+logistic_mod2 = train(income ~. -workclass,
   data = IncomeData,
   trControl = mycontrol,
   metric="ROC",
