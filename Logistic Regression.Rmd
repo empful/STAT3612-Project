@@ -1,5 +1,5 @@
 ---
-title: "logit reg"
+title: "Logistic Regression"
 author: "Fu Yunxiang"
 date: "2021/12/3"
 output: html_document
@@ -9,22 +9,78 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+setwd("C:\\Users\\user\\Documents\\HKU\\Y3 s1\\STAT3612 Statistical Machine Learning\\Project")
+IncomeData = read.csv("clean.csv")
+IncomeData[sapply(IncomeData, is.character)] <- lapply(IncomeData[sapply(IncomeData, is.character)], as.factor)
+head(IncomeData)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+set.seed(12L)
+library(caret)
+mycontrol <- trainControl(summaryFunction = twoClassSummary, method="cv", number=10, classProbs = TRUE)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+```
+
+
+Logistic Regression:
+```{r}
+#train model
+logistic_mod = train(income ~.,
+  data = IncomeData,
+  trControl = mycontrol,
+  metric="ROC",
+  #preProcess = c("center", "scale"),
+  method = "glm"
+)
+print(logistic_mod)
+```
+
+```{r}
+summary(logistic_mod)
+```
+
+Show all variables 
+```{r}
+names(IncomeData)
+```
+Remove each variable and perform ANOVA test. The result is that all variables are significant so we should keep them.
+```{r}
+logistic_mod2 = train(income ~. -education.num,
+  data = IncomeData,
+  trControl = mycontrol,
+  metric="ROC",
+  #preProcess = c("center", "scale"),
+  method = "glm"
+)
+```
+
+#From the anova results, we conclude that all variables are significant.
+```{r}
+anova(logistic_mod$finalModel, logistic_mod2$finalModel, test = "Chisq")
+```
+
+#Now we check assumptions and large residuals
+
+Check assumptions by plots below:
+```{r}
+LogitModel = logistic_mod$finalModel
+plot(LogitModel)
+```
+
+Check large residuals:
+
+We first observe patterns for the 15 largest residuals
+```{r}
+r <- residuals(LogitModel)
+temp = abs(r)
+temp = order(temp,decreasing = TRUE)
+IncomeData[temp[1:15],]
+```
+Observe that white US males that earn >50K and have 0 net.capital.gain, with marital.status = "not-married" or "other" appears frequently.
