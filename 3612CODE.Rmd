@@ -1,0 +1,130 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+IncomeData = read.csv("/Users/elaine/Desktop/clean.csv")
+IncomeData[sapply(IncomeData, is.character)] <- lapply(IncomeData[sapply(IncomeData, is.character)], as.factor)
+head(IncomeData)
+```
+```{r}
+set.seed(2)
+model_glm <- train(income~., data=IncomeData,method="glm", preProcess = c("center", "scale"),metric="Accuracy")
+print(model_glm)
+```
+```{r}
+# 2.decision tree
+set.seed(2)
+model_dt <- train(income~., data=IncomeData, method="rpart", metric="Accuracy")
+print(model_dt)
+```
+
+```{r}
+# Have a look at the feature importance of logistics regression model
+import_classif <- varImp(model_glm)
+import_classif
+```
+```{r}
+names(IncomeData)
+```
+```{r}
+covariates <- paste("age", "fnlwgt", "education.num", "hours.per.week",
+                    "workclass", "marital.status", "occupation",
+                    "race", "sex", "native.country", "net.capital.gain",
+                     sep = "+")
+
+form <- as.formula(paste("income ~", covariates))
+
+start_time <- proc.time()
+glm.model <- glm(formula = form,
+                 data=IncomeData, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+# The option "x=TRUE" returns the design matrix
+time.logistic <- proc.time() - start_time
+time.logistic
+```
+
+```{r}
+summary(glm.model)$coefficients[, 1:2]
+```
+
+```{r}
+findLinearCombos(glm.model$x)
+```
+
+```{r}
+summary(glm.model)$null.deviance
+```
+```{r}
+summary(glm.model)$deviance
+```
+
+```{r}
+k <- length(glm.model$coefficients)
+D_M <- glm.model$deviance
+D_0 <- glm.model$null.deviance
+
+1 - pchisq(q = D_0 - D_M, df = k - 1)
+```
+
+```{r}
+head(glm.model$fitted.values)
+```
+
+```{r}
+predicted.probs <- predict(glm.model, type = "response")
+
+# predicted.probs <- glm.model.wld$fitted.values
+
+head(predicted.probs) # returns probabilities
+```
+
+```{r}
+observed.values <- ifelse(IncomeData$income  == " >50K", 1, 0)
+```
+
+```{r}
+predicted.probs <- predict(glm.model, type = "response")
+
+predicted.response <- ifelse(predicted.probs > 0.5, 1, 0)
+
+head(predicted.response, 20)
+```
+
+```{r}
+head(observed.values, 20)
+```
+
+```{r}
+mean(observed.values == predicted.response)
+```
+
+```{r}
+anova(glm.model, test = "LRT")
+```
+
+```{r}
+summary(glm.model)
+```
+
+```{r}
+logit1<-glm(income~., data=IncomeData, family='binomial')
+```
+```{r}
+summary(logit1)
+```
+
+```{r}
+logitMod <- glm(income  ~ age + education.num + hours.per.week + workclass + marital.status + occupation + race+sex+native.country+net.capital.gain, data=IncomeData, family=binomial(link="logit"))
+summary(logitMod)
+```
+
+```{r}
+predicted <- plogis(predict(logitMod, IncomeData))
+summary(predicted)
+```
+
+##"age", "fnlwgt", "education.num", "hours.per.week",
+                    "workclass", "marital.status", "occupation",
+                    "race", "sex", "native.country", "net.capital.gain"
