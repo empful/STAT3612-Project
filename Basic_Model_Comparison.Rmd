@@ -1,0 +1,118 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,echo = TRUE)
+```
+
+# The codes below compare the accuracy of logistic regression on the cleaned data with Bagging Classification, Non-linear SVM, and Random Forest.
+
+```{r}
+setwd("C:\\Users\\user\\Documents\\HKU\\Y3 s1\\STAT3612 Statistical Machine Learning\\Project")
+IncomeData = read.csv("clean.csv")
+IncomeData[sapply(IncomeData, is.character)] <- lapply(IncomeData[sapply(IncomeData, is.character)], as.factor)
+head(IncomeData)
+```
+
+
+```{r}
+
+#training sample = 80%
+train_size = floor(0.8 * nrow(IncomeData))
+train_ind = sample(seq_len(nrow(IncomeData)), size = train_size)
+
+train_set = IncomeData[train_ind,]
+test_set = IncomeData[-train_ind,]
+
+test_y = test_set$income
+```
+
+Run models with original data
+```{r}
+set.seed(12L)
+library(caret)
+mycontrol <- trainControl(summaryFunction = twoClassSummary, method="cv", number=10, classProbs = TRUE)
+```
+
+Logistic Regression:
+```{r}
+#train model
+glm_mod = train(income ~.,
+  data = train_set,
+  trControl = mycontrol,
+  metric="ROC",
+  #preProcess = c("center", "scale"),
+  method = "glm"
+)
+print(glm_mod)
+```
+
+```{r}
+#evaluate accuracy on test set
+glm_pred = predict(glm_mod, newdata = test_set)
+confusionMatrix(glm_pred, test_y)
+```
+
+Bagging Classification:
+```{r}
+library(doParallel)  # for parallel backend to foreach
+library(foreach)
+library(ipred)
+library(rpart)
+
+#train model
+bagging_mod <- bagging(
+  formula = income ~ .,
+  data = train_set,
+  nbagg = 100,  
+  coob = TRUE,
+  control = rpart.control(minsplit = 2, cp = 0)
+)
+print(bagging_mod)
+```
+
+
+```{r}
+#evaluate bagging accuracy on test set
+bagging_pred = predict(bagging_mod, newdata = train_set)
+confusionMatrix(dy_pred, test_y)
+```
+
+Non-linear SVM:
+```{r}
+#train model
+svm_mod = train(income ~ ., data = train_set,
+  metric = "Accuracy",
+  method = "svmRadial",
+  trControl = mycontrol,
+  tuneLength=5
+)
+print(svm_mod)
+```
+
+```{r}
+#evaluate svm accuracy on test set
+svm_pred = predict(SVM_mod, newdata = test_set)
+confusionMatrix(svm_pred, test_y)
+```
+
+Random Forest:
+```{r}
+#train model
+rForest_mod = train(income ~ ., data = train_set,
+  metric = "Accuracy",
+  method = "ranger",
+  trControl = mycontrol,
+  tuneLength=5
+)
+print(rForest_mod)
+```
+
+```{r}
+#evaluate svm accuracy on test set
+rf_pred = predict(rForest_mod, newdata = test_set)
+confusionMatrix(rf_pred, test_y)
+```
