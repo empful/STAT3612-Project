@@ -1,6 +1,6 @@
 ---
 title: "Logistic Regression"
-author: "Fu Yunxiang"
+author: "STAT3612"
 date: "2021/12/3"
 output: html_document
 ---
@@ -17,70 +17,105 @@ IncomeData[sapply(IncomeData, is.character)] <- lapply(IncomeData[sapply(IncomeD
 head(IncomeData)
 ```
 
-
+# train test split
 ```{r}
-set.seed(12L)
 library(caret)
-mycontrol <- trainControl(summaryFunction = twoClassSummary, method="cv", number=10, classProbs = TRUE)
+set.seed(12L)
+
+#training sample = 80%
+train_size = floor(0.8 * nrow(IncomeData))
+train_ind = sample(seq_len(nrow(IncomeData)), size = train_size)
+
+train_set = IncomeData[train_ind,]
+test_set = IncomeData[-train_ind,]
+
+test_y = test_set$income
 ```
 
+
+# Logistic Regression with glm
+```{r}
+start_time <- proc.time()
+glm.model <- glm(formula = income~.,
+                 data=train_set, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+time.logistic <- proc.time() - start_time
+time.logistic
+```
 
 ```{r}
+summary(glm.model)
 ```
 
-
-Logistic Regression:
+Check accuracy on test set; accuracy = 83.21%
 ```{r}
-#train model
-logistic_mod = train(income ~.,
-  data = IncomeData,
-  trControl = mycontrol,
-  metric="ROC",
-  #preProcess = c("center", "scale"),
-  method = "glm"
-)
-print(logistic_mod)
+logit_prob = predict(glm.model, newdata= test_set,type = "response")
+logit_pred = as.factor(ifelse(logit_prob > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred, test_y)
 ```
 
+# try adding second-order terms
 ```{r}
-summary(logistic_mod)
+#glm.model2 <- glm(formula = income~.^2,data=train_set, family = binomial(link = "logit"),x = TRUE)
+#summary(glm.model2)
+```
+Test accuracy = 83.52%. The addition of second order terms only increase test accuracy by a insignificant 0.31%. Hence we will not add second order terms.
+```{r}
+#logit_prob2 = predict(glm.model2, newdata= test_set,type = "response")
+#logit_pred2 = as.factor(ifelse(logit_prob2 > 0.5, "More_than_50K", "Less_or_equal_50K"))
+#confusionMatrix(logit_pred2, test_y)
 ```
 
-Show all variables 
+
+ANOVA Likelihood ratio test. The function sequentially compares nested models with increasing complexity against the full model by adding one predictor at a time. That is, at each step of the process the algorithm compares a model consisting of one, two, and so on covariates against the full model. Theory can be found here: https://rpubs.com/vassitar/us_census_theory#33_likelihood_ratio_test_statistic
 ```{r}
-names(IncomeData)
-```
-Remove each variable and perform ANOVA test. The result is that all variables are significant so we should keep them.
-```{r}
-logistic_mod2 = train(income ~. -workclass,
-  data = IncomeData,
-  trControl = mycontrol,
-  metric="ROC",
-  #preProcess = c("center", "scale"),
-  method = "glm"
-)
+anova(glm.model, test="LRT")
 ```
 
-#From the anova results, we conclude that all variables are significant.
+Observe that fnlwgt is insignificant. Try removing it:
 ```{r}
-anova(logistic_mod$finalModel, logistic_mod2$finalModel, test = "Chisq")
+glm.model3 <- glm(formula = income~. -fnlwgt,
+                 data=train_set, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+summary(glm.model3)
+```
+Test accuracy = 83.24%. Removing fnlwgt increased accuracy on test set. Furthermore, this variable is hard to interpret. Hence, we remove it.
+```{r}
+logit_prob3 = predict(glm.model3, newdata= test_set,type = "response")
+logit_pred3 = as.factor(ifelse(logit_prob3 > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred3, test_y)
+```
+```{r}
+IncomeData$fnlwgt = NULL
 ```
 
-#Now we check assumptions and large residuals
 
-Check assumptions by plots below:
+Assumption Checking
 ```{r}
-LogitModel = logistic_mod$finalModel
-plot(LogitModel)
+plot(glm.model3)
 ```
+
 
 Check large residuals:
 
 We first observe patterns for the 15 largest residuals
 ```{r}
-r <- residuals(LogitModel)
+r <- residuals(glm.model3)
 temp = abs(r)
 temp = order(temp,decreasing = TRUE)
 IncomeData[temp[1:15],]
 ```
-Observe that white US males that earn >50K and have 0 net.capital.gain, with marital.status = "not-married" or "other" appears frequently.
+Observe that white US males that earn >50K and have 0 net.capital.gain, with marital.status = "not-married" or "other", and have education.num <=6 appears frequently.
+
+Using this intuition, we try grouping education.num and age.
+
+
+```{r}
+cutEducation = cut(train_set$education.num, c(-1, 7, 11, 17))
+```
+
+```{r}
+
+```
