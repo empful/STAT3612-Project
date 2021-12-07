@@ -1,0 +1,70 @@
+---
+title: "Pre-processing"
+author: "STAT3612"
+date: "2021/12/7"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### load data
+```{r}
+#This sets working directory to source file directory.
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+
+IncomeData = read.csv("adult.csv")
+head(IncomeData)
+print(dim(IncomeData))
+```
+Pre-processing
+```{r}
+# remove duplicates
+rows = nrow(IncomeData)
+IncomeData= unique(IncomeData)
+print(paste("Number of duplicate samples removed:", rows-nrow(IncomeData)))
+```
+
+```{r}
+rows = nrow(IncomeData)
+#remove missing value
+for (i in names(IncomeData)){
+  IncomeData[i][IncomeData[i] == "?"] = NA
+}
+IncomeData = na.omit(IncomeData)
+print(paste("Number of samples with missing values removed:", rows-nrow(IncomeData)))
+```
+
+```{r}
+#Transformations and cleansing using intuition from EDA
+IncomeData$education = NULL
+IncomeData$relationship = NULL
+IncomeData$net.capital.gain = IncomeData$capital.gain - IncomeData$capital.loss
+IncomeData$capital.gain = NULL
+IncomeData$capital.loss = NULL
+IncomeData[sapply(IncomeData, is.character)] <- lapply(IncomeData[sapply(IncomeData, is.character)], as.factor)
+levels(IncomeData$marital.status) = c("other","married","married","other","not-married","other","other")
+head(IncomeData)
+```
+
+
+```{r}
+#Adjust names of factor levels to satisfy R variable name requirements
+
+library(dplyr)
+IncomeData = IncomeData %>% 
+  mutate(workclass = factor(workclass, 
+          labels = make.names(levels(as.factor(workclass)))),
+         occupation = factor(occupation, 
+          labels = make.names(levels(as.factor(occupation)))),
+         native.country = factor(native.country, 
+          labels = make.names(levels(as.factor(native.country)))),
+         income = factor(income, 
+          labels = c("Less_or_equal_50K","More_than_50K"))
+         )
+
+#note positive means >50K, negative means <=50K
+head(IncomeData)
+```
