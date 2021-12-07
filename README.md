@@ -1,3 +1,12 @@
 # STAT3612-Project
 
-R markdown codes for project.
+R codes for project.
+
+To follow the report, run code in this order:
+
+1) "Section 2 eda.R"
+2) "Section 2 Preprocessing.Rmd"
+3) "Section 5.1 Model_Comparison.Rmd"
+4) "Section 5.2 Logistic Regression.Rmd"
+
+Note clean.csv is the pre-processed data set.
