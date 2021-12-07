@@ -1,0 +1,160 @@
+---
+title: "Logistic Regression"
+author: "STAT3612"
+date: "2021/12/3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#This sets working directory to source file directory.
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+IncomeData = read.csv("clean.csv")
+IncomeData[sapply(IncomeData, is.character)] <- lapply(IncomeData[sapply(IncomeData, is.character)], as.factor)
+head(IncomeData)
+```
+
+# train test split
+```{r}
+library(caret)
+set.seed(12L)
+
+#training sample = 80%
+train_size = floor(0.8 * nrow(IncomeData))
+train_ind = sample(seq_len(nrow(IncomeData)), size = train_size)
+
+train_set = IncomeData[train_ind,]
+test_set = IncomeData[-train_ind,]
+
+test_y = test_set$income
+```
+
+
+# Logistic Regression with glm
+```{r}
+start_time <- proc.time()
+glm.model <- glm(formula = income~.,
+                 data=train_set, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+time.logistic <- proc.time() - start_time
+time.logistic
+```
+
+```{r}
+summary(glm.model)
+```
+
+Check accuracy on test set; accuracy = 83.21%
+```{r}
+logit_prob = predict(glm.model, newdata= test_set,type = "response")
+logit_pred = as.factor(ifelse(logit_prob > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred, test_y)
+```
+
+# try adding second-order terms
+```{r}
+glm.model2 <- glm(formula = income~.^2,data=train_set, family = binomial(link = "logit"),x = TRUE)
+summary(glm.model2)
+```
+Test accuracy = 83.52%. The addition of second order terms only increase test accuracy by a insignificant 0.31%. Hence we will not add second order terms.
+```{r}
+logit_prob2 = predict(glm.model2, newdata= test_set,type = "response")
+logit_pred2 = as.factor(ifelse(logit_prob2 > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred2, test_y)
+```
+
+
+# Perform ANOVA Likelihood ratio test.
+```{r}
+anova(glm.model, test="LRT")
+```
+
+Observe that fnlwgt is insignificant. Try removing it:
+```{r}
+glm.model3 <- glm(formula = income~. -fnlwgt,
+                 data=train_set, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+summary(glm.model3)
+```
+Test accuracy = 83.14%. Removing fnlwgt only decrease accuracy. Furthermore, this variable is hard to interpret. Hence, we remove it.
+```{r}
+logit_prob3 = predict(glm.model3, newdata= test_set,type = "response")
+logit_pred3 = as.factor(ifelse(logit_prob3 > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred3, test_y)
+```
+```{r}
+IncomeData$fnlwgt = NULL
+```
+
+
+# Assumption Checking
+```{r}
+plot(glm.model3)
+```
+
+# Futher tuning by grouping variables.
+### Check large residuals:
+
+We first observe patterns for the 15 largest residuals
+```{r}
+r <- residuals(glm.model3)
+temp = abs(r)
+temp = order(temp,decreasing = TRUE)
+IncomeData[temp[1:15],]
+```
+Observe that white US males that earn >50K and have 0 net.capital.gain, with marital.status = "not-married" or "other", and have education.num <=6 appears frequently.
+
+Using this intuition, we try grouping education.num and age.
+
+GROUP EDUCATION.NUm
+```{r}
+train_set$cutEducation = cut(train_set$education.num, seq(-1,17,2))
+test_set$cutEducation = cut(test_set$education.num, seq(-1,17,2))
+```
+
+```{r}
+glm.model4 <- glm(formula = income~. -fnlwgt -education.num,
+                 data=train_set, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+summary(glm.model4)
+```
+
+Observe that all the coefficients are similar and highly insignificant. This suggests that using the continuous education.num is better. Hence, we do not group education.num. Moreover, test accuracy decreased, but interpretability does not seem to increase.
+
+```{r}
+logit_prob4 = predict(glm.model4, newdata= test_set,type = "response")
+logit_pred4 = as.factor(ifelse(logit_prob4 > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred4, test_y)
+```
+We now try grouping age.
+
+```{r}
+train_set$cutAge = cut(train_set$age, seq(16,90,10))
+test_set$cutAge = cut(test_set$age, seq(16,90,10))
+```
+
+```{r}
+glm.model5 <- glm(formula = income~. -fnlwgt -education.num -cutEducation - age,
+                 data=train_set, 
+                 family = binomial(link = "logit"),
+                 x = TRUE)
+summary(glm.model5)
+```
+
+Note that all factors are significant. Since the coefficient of cutAge intervals have some variation, we will not further group these intervals.
+
+```{r}
+logit_prob5 = predict(glm.model5, newdata= test_set,type = "response")
+logit_pred5 = as.factor(ifelse(logit_prob5 > 0.5, "More_than_50K", "Less_or_equal_50K"))
+confusionMatrix(logit_pred5, test_y)
+```
+
+Observe that test accuracy decreased slightly, but interpretability does not seem to increase. So we do not group age.
