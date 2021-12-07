@@ -9,4 +9,6 @@ To follow the report, run code in this order:
 3) "Section 5.1 Model_Comparison.Rmd"
 4) "Section 5.2 Logistic Regression.Rmd"
 
-Note clean.csv is the pre-processed data set.
+Note that:
+clean.csv is the pre-processed data set.
+Logistic-Regression.html is the results for section 5.2 model tuning.
